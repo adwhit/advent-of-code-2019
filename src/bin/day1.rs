@@ -17,13 +17,11 @@ fn payload(base: i64) -> i64 {
     }
 }
 
-
 fn main() {
     let vals = read();
     let res1: i64 = vals.iter().map(|&val| payload(val) - val).sum();
     println!("{}", res1);
 }
-
 
 #[test]
 fn test_payload() {
