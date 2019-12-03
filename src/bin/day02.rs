@@ -1,5 +1,5 @@
 fn read() -> Vec<usize> {
-    std::fs::read_to_string("data/02.1")
+    std::fs::read_to_string("data/02")
         .unwrap()
         .trim()
         .split(',')

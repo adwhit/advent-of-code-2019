@@ -1,7 +1,7 @@
 use std::fs;
 
 fn read() -> Vec<i64> {
-    fs::read_to_string("data/01.1")
+    fs::read_to_string("data/01")
         .unwrap()
         .lines()
         .map(|line| line.parse::<i64>().unwrap())
