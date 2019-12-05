@@ -1,11 +1,13 @@
 use std::collections::BTreeMap;
 
 enum Direction {
-    Up, Down, Left, Right
+    Up,
+    Down,
+    Left,
+    Right,
 }
 
 fn parse(data: &str) -> (Vec<(Direction, i32)>, Vec<(Direction, i32)>) {
-
     fn parse_entry(entry: &str) -> (Direction, i32) {
         use Direction::*;
         let dirn = match entry.chars().nth(0).unwrap() {
@@ -13,20 +15,15 @@ fn parse(data: &str) -> (Vec<(Direction, i32)>, Vec<(Direction, i32)>) {
             'D' => Down,
             'R' => Right,
             'L' => Left,
-            other => panic!("Bad char: {}", other)
+            other => panic!("Bad char: {}", other),
         };
         let dist: i32 = entry[1..].parse().unwrap();
         (dirn, dist)
     }
 
     let mut iter = data
-        .lines().map(|line| {
-            line
-                .trim()
-                .split(',')
-                .map(parse_entry)
-                .collect::<Vec<_>>()
-        });
+        .lines()
+        .map(|line| line.trim().split(',').map(parse_entry).collect::<Vec<_>>());
     (iter.next().unwrap(), iter.next().unwrap())
 }
 
@@ -36,22 +33,14 @@ fn get_route(route: &[(Direction, i32)]) -> BTreeMap<(i32, i32), u32> {
     let mut totdist = 0;
     let mut posx = 0;
     let mut posy = 0;
-    for (dirn, dist) in  route {
+    for (dirn, dist) in route {
         for _ in 0..*dist {
             totdist += 1;
             match dirn {
-                Up => {
-                    posy += 1
-                }
-                Down => {
-                    posy -= 1
-                }
-                Left => {
-                    posx -= 1
-                }
-                Right => {
-                    posx += 1
-                }
+                Up => posy += 1,
+                Down => posy -= 1,
+                Left => posx -= 1,
+                Right => posx += 1,
             }
             track.insert((posx, posy), totdist);
         }
@@ -67,14 +56,17 @@ fn get_min_dist(route1: &[(Direction, i32)], route2: &[(Direction, i32)]) -> (u3
     for (posn, steps1) in route1.iter() {
         if let Some(steps2) = route2.get(posn) {
             let manhat = (posn.0.abs() + posn.1.abs()) as u32;
-            if manhat < min_manhat { min_manhat = manhat };
+            if manhat < min_manhat {
+                min_manhat = manhat
+            };
             let route = steps1 + steps2;
-            if route < min_route { min_route = route };
+            if route < min_route {
+                min_route = route
+            };
         }
     }
     (min_manhat, min_route)
 }
-
 
 fn main() {
     let file = std::fs::read_to_string("data/03").unwrap();

@@ -4,9 +4,9 @@ fn digits(mut v: u32) -> Vec<u32> {
         digits.push(v % 10);
         v = v / 10;
         if v == 0 {
-            break
+            break;
         }
-    };
+    }
     assert_eq!(digits.len(), 6);
     digits
 }
@@ -46,7 +46,6 @@ fn is_valid_2(v: &u32) -> bool {
     }
     is_increasing && has_run_of_two
 }
-
 
 fn main() {
     let ct = (240920..=789857).filter(is_valid_1).count();
