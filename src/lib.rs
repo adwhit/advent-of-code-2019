@@ -216,42 +216,31 @@ fn digits(mut v: u32) -> Vec<u8> {
 }
 
 impl Mode {
+    fn get(ix: usize, modes: &[u8]) -> Self {
+        modes
+            .get(ix)
+            .map(|&v| Mode::try_from(v).unwrap())
+            .unwrap_or(Mode::Position)
+    }
+
     fn none(modes: &[u8]) -> () {
         assert_eq!(modes.len(), 0);
     }
     fn one(modes: &[u8]) -> Mode {
         assert!(modes.len() <= 1);
-        modes
-            .get(0)
-            .map(|&v| Mode::try_from(v).unwrap())
-            .unwrap_or(Mode::Position)
+        Mode::get(0, modes)
     }
     fn two(modes: &[u8]) -> (Mode, Mode) {
         assert!(modes.len() <= 2);
-        let one = modes
-            .get(0)
-            .map(|&v| Mode::try_from(v).unwrap())
-            .unwrap_or(Mode::Position);
-        let two = modes
-            .get(1)
-            .map(|&v| Mode::try_from(v).unwrap())
-            .unwrap_or(Mode::Position);
+        let one = Mode::get(0, modes);
+        let two = Mode::get(1, modes);
         (one, two)
     }
     fn three(modes: &[u8]) -> (Mode, Mode, Mode) {
         assert!(modes.len() <= 3);
-        let one = modes
-            .get(0)
-            .map(|&v| Mode::try_from(v).unwrap())
-            .unwrap_or(Mode::Position);
-        let two = modes
-            .get(1)
-            .map(|&v| Mode::try_from(v).unwrap())
-            .unwrap_or(Mode::Position);
-        let three = modes
-            .get(2)
-            .map(|&v| Mode::try_from(v).unwrap())
-            .unwrap_or(Mode::Position);
+        let one = Mode::get(0, modes);
+        let two = Mode::get(1, modes);
+        let three = Mode::get(2, modes);
         (one, two, three)
     }
 }

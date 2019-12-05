@@ -21,7 +21,6 @@ fn example2() {
     assert_eq!(machine.state(), &[1101, 100, -1, 4, 99]);
 }
 
-
 // #[test]
 // fn example_5_2() {
 
