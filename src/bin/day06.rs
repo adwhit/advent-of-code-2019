@@ -41,12 +41,17 @@ fn pt2(input: &[(String, String)]) -> u32 {
         children.push(child.as_str());
     }
 
-    fn dfs(planet: &str, target1: &str, target2: &str, tree: &HashMap<&str, Vec<&str>>) -> (Option<u32>, Option<u32>) {
+    fn dfs(
+        planet: &str,
+        target1: &str,
+        target2: &str,
+        tree: &HashMap<&str, Vec<&str>>,
+    ) -> (Option<u32>, Option<u32>) {
         if planet == target1 {
-            return (Some(0), None)
+            return (Some(0), None);
         };
         if planet == target2 {
-            return (None, Some(0))
+            return (None, Some(0));
         };
         let mut got_left = None;
         let mut got_right = None;
@@ -61,15 +66,13 @@ fn pt2(input: &[(String, String)]) -> u32 {
 
                         // We found one but not the other.
                         // Save this fact, and if another child finds the other, we are done
-                        (Some(l), None) => {
-                            got_left = Some(l + 1)
-                        }
+                        (Some(l), None) => got_left = Some(l + 1),
                         (None, Some(r)) => {
                             got_right = Some(r + 1);
                         }
 
                         // No luck this time
-                        (None, None) => ()
+                        (None, None) => (),
                     }
                 }
                 (got_left, got_right)
@@ -78,12 +81,11 @@ fn pt2(input: &[(String, String)]) -> u32 {
     }
 
     if let (Some(l), Some(r)) = dfs("COM", "YOU", "SAN", &tree) {
-        l + r - 2  // remove the 'extra counting' we did we storing the options
+        l + r - 2 // remove the 'extra counting' we did we storing the options
     } else {
         panic!("Failed")
     }
 }
-
 
 fn main() {
     let input = read();
@@ -97,17 +99,17 @@ fn main() {
 #[test]
 fn example() {
     let input: Vec<(String, String)> = vec![
-        ("COM".into(),"B".into()),
-        ("B".into(),"C".into()),
-        ("C".into(),"D".into()),
-        ("D".into(),"E".into()),
-        ("E".into(),"F".into()),
-        ("B".into(),"G".into()),
-        ("G".into(),"H".into()),
-        ("D".into(),"I".into()),
-        ("E".into(),"J".into()),
-        ("J".into(),"K".into()),
-        ("K".into(),"L".into()),
+        ("COM".into(), "B".into()),
+        ("B".into(), "C".into()),
+        ("C".into(), "D".into()),
+        ("D".into(), "E".into()),
+        ("E".into(), "F".into()),
+        ("B".into(), "G".into()),
+        ("G".into(), "H".into()),
+        ("D".into(), "I".into()),
+        ("E".into(), "J".into()),
+        ("J".into(), "K".into()),
+        ("K".into(), "L".into()),
     ];
     assert_eq!(pt1(&input), 42)
 }
@@ -115,19 +117,19 @@ fn example() {
 #[test]
 fn example_6_2() {
     let input: Vec<(String, String)> = vec![
-        ("COM".into(),"B".into()),
-        ("B".into(),"C".into()),
-        ("C".into(),"D".into()),
-        ("D".into(),"E".into()),
-        ("E".into(),"F".into()),
-        ("B".into(),"G".into()),
-        ("G".into(),"H".into()),
-        ("D".into(),"I".into()),
-        ("E".into(),"J".into()),
-        ("J".into(),"K".into()),
-        ("K".into(),"L".into()),
-        ("K".into(),"YOU".into()),
-        ("I".into(),"SAN".into()),
+        ("COM".into(), "B".into()),
+        ("B".into(), "C".into()),
+        ("C".into(), "D".into()),
+        ("D".into(), "E".into()),
+        ("E".into(), "F".into()),
+        ("B".into(), "G".into()),
+        ("G".into(), "H".into()),
+        ("D".into(), "I".into()),
+        ("E".into(), "J".into()),
+        ("J".into(), "K".into()),
+        ("K".into(), "L".into()),
+        ("K".into(), "YOU".into()),
+        ("I".into(), "SAN".into()),
     ];
     assert_eq!(pt2(&input), 4)
 }

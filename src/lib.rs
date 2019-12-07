@@ -1,15 +1,39 @@
 use std::convert::TryFrom;
 use std::io::{self, BufRead, Write};
 
-#[derive(Debug, Clone)]
 pub struct Machine {
     data: Vec<i32>,
     ip: usize,
+    input_callback: Box<dyn FnMut() -> i32 + Send>,
+    output_callback: Box<dyn FnMut(i32) + Send>,
+}
+
+fn read_from_stdin() -> i32 {
+    loop {
+        print!("Input > ");
+        io::stdout().flush().unwrap();
+        let stdin = io::stdin();
+        let line = stdin
+            .lock()
+            .lines()
+            .next()
+            .expect("No line")
+            .expect("Bad read");
+        match line.trim().parse::<i32>() {
+            Ok(num) => break num,
+            Err(_) => println!("Bad input"),
+        }
+    }
 }
 
 impl Machine {
     pub fn new(data: Vec<i32>) -> Self {
-        Self { data, ip: 0 }
+        Self {
+            data,
+            ip: 0,
+            input_callback: Box::new(read_from_stdin),
+            output_callback: Box::new(|v| println!("{}", v)),
+        }
     }
 
     pub fn init(mut data: Vec<i32>, v1: i32, v2: i32) -> Self {
@@ -33,6 +57,19 @@ impl Machine {
         Machine::init(machine.data, v1, v2)
     }
 
+    pub fn new_with_io(
+        data: Vec<i32>,
+        input: impl FnMut() -> i32 + 'static + Send,
+        output: impl FnMut(i32) + 'static + Send,
+    ) -> Self {
+        Self {
+            data,
+            ip: 0,
+            input_callback: Box::new(input),
+            output_callback: Box::new(output),
+        }
+    }
+
     pub fn state(&self) -> &[i32] {
         &self.data
     }
@@ -42,26 +79,12 @@ impl Machine {
             Instr::NoneArg(OpNone::Exit) => return Some(self.get(0)),
             Instr::OneArg(arg, mode1) => match arg {
                 OpOne::Input => {
-                    let num = loop {
-                        print!("Input > ");
-                        io::stdout().flush().unwrap();
-                        let stdin = io::stdin();
-                        let line = stdin
-                            .lock()
-                            .lines()
-                            .next()
-                            .expect("No line")
-                            .expect("Bad read");
-                        match line.trim().parse::<i32>() {
-                            Ok(num) => break num,
-                            Err(_) => println!("Bad input"),
-                        }
-                    };
+                    let num = (self.input_callback)();
                     self.fetch_and_set(mode1, num);
                 }
                 OpOne::Output => {
                     let out = self.fetch(mode1);
-                    println!("{}", out);
+                    (self.output_callback)(out)
                 }
             },
             Instr::TwoArg(arg, (mode1, mode2)) => {
