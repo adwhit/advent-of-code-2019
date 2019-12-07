@@ -1,4 +1,4 @@
-use std::sync::mpsc::{sync_channel, Receiver};
+use std::sync::mpsc::{sync_channel, Receiver, SyncSender};
 use std::thread;
 
 use itertools::Itertools;
@@ -22,21 +22,11 @@ fn run_chained_machines(data: &[i32], phases: (i32, i32, i32, i32, i32)) -> i32 
     let (tx6, rx6) = sync_channel(0);
 
     let machines = vec![
-        Machine::new_with_io(data.to_vec(), takes_input(phases.0, rx1), move |out| {
-            tx2.send(out).unwrap()
-        }),
-        Machine::new_with_io(data.to_vec(), takes_input(phases.1, rx2), move |out| {
-            tx3.send(out).unwrap()
-        }),
-        Machine::new_with_io(data.to_vec(), takes_input(phases.2, rx3), move |out| {
-            tx4.send(out).unwrap()
-        }),
-        Machine::new_with_io(data.to_vec(), takes_input(phases.3, rx4), move |out| {
-            tx5.send(out).unwrap()
-        }),
-        Machine::new_with_io(data.to_vec(), takes_input(phases.4, rx5), move |out| {
-            tx6.send(out).unwrap()
-        }),
+        Machine::new_with_io(data.to_vec(), takes_input(phases.0, rx1), send_output(tx2)),
+        Machine::new_with_io(data.to_vec(), takes_input(phases.1, rx2), send_output(tx3)),
+        Machine::new_with_io(data.to_vec(), takes_input(phases.2, rx3), send_output(tx4)),
+        Machine::new_with_io(data.to_vec(), takes_input(phases.3, rx4), send_output(tx5)),
+        Machine::new_with_io(data.to_vec(), takes_input(phases.4, rx5), send_output(tx6)),
     ];
 
     let _handles: Vec<_> = machines
@@ -71,6 +61,10 @@ fn takes_input(inp: i32, rx: Receiver<i32>) -> impl FnMut() -> i32 {
             inp
         }
     }
+}
+
+fn send_output(tx: SyncSender<i32>) -> impl FnMut(i32) {
+    move |val| tx.send(val).unwrap()
 }
 
 #[test]
