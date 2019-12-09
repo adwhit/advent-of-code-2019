@@ -2,13 +2,15 @@ use std::convert::TryFrom;
 use std::io::{self, BufRead, Write};
 
 pub struct Machine {
-    data: Vec<i32>,
+    data: Vec<i64>,
     ip: usize,
-    input_callback: Box<dyn FnMut() -> i32 + Send>,
-    output_callback: Box<dyn FnMut(i32) + Send>,
+    relative_base: i64,
+    input_callback: Box<dyn FnMut() -> i64 + Send>,
+    output_callback: Box<dyn FnMut(i64) + Send>,
+    initial_size: usize
 }
 
-fn read_from_stdin() -> i32 {
+fn read_from_stdin() -> i64 {
     loop {
         print!("Input > ");
         io::stdout().flush().unwrap();
@@ -19,7 +21,7 @@ fn read_from_stdin() -> i32 {
             .next()
             .expect("No line")
             .expect("Bad read");
-        match line.trim().parse::<i32>() {
+        match line.trim().parse::<i64>() {
             Ok(num) => break num,
             Err(_) => println!("Bad input"),
         }
@@ -27,16 +29,11 @@ fn read_from_stdin() -> i32 {
 }
 
 impl Machine {
-    pub fn new(data: Vec<i32>) -> Self {
-        Self {
-            data,
-            ip: 0,
-            input_callback: Box::new(read_from_stdin),
-            output_callback: Box::new(|v| println!("{}", v)),
-        }
+    pub fn new(data: Vec<i64>) -> Self {
+        Self::new_with_io(data, Box::new(read_from_stdin), Box::new(|v| println!("{}", v)))
     }
 
-    pub fn init(mut data: Vec<i32>, v1: i32, v2: i32) -> Self {
+    pub fn init(mut data: Vec<i64>, v1: i64, v2: i64) -> Self {
         data[1] = v1;
         data[2] = v2;
         Self::new(data)
@@ -47,34 +44,38 @@ impl Machine {
             .unwrap()
             .trim()
             .split(',')
-            .map(|line| line.parse::<i32>().unwrap())
+            .map(|line| line.parse::<i64>().unwrap())
             .collect();
         Self::new(data)
     }
 
-    pub fn init_from_file(path: &str, v1: i32, v2: i32) -> Self {
+    pub fn init_from_file(path: &str, v1: i64, v2: i64) -> Self {
         let machine = Self::from_file(path);
         Machine::init(machine.data, v1, v2)
     }
 
     pub fn new_with_io(
-        data: Vec<i32>,
-        input: impl FnMut() -> i32 + 'static + Send,
-        output: impl FnMut(i32) + 'static + Send,
+        mut data: Vec<i64>,
+        input: impl FnMut() -> i64 + 'static + Send,
+        output: impl FnMut(i64) + 'static + Send,
     ) -> Self {
+        let initial_size = data.len();
+        data.extend(std::iter::repeat(0).take(1024 * 8));
         Self {
             data,
             ip: 0,
+            relative_base: 0,
             input_callback: Box::new(input),
             output_callback: Box::new(output),
+            initial_size
         }
     }
 
-    pub fn state(&self) -> &[i32] {
-        &self.data
+    pub fn state(&self) -> &[i64] {
+        &self.data[..self.initial_size]
     }
 
-    pub fn step(&mut self) -> Option<i32> {
+    pub fn step(&mut self) -> Option<i64> {
         match parse_instr(self.fetch(Mode::Immediate)).unwrap() {
             Instr::NoneArg(OpNone::Exit) => return Some(self.get(0)),
             Instr::OneArg(arg, mode1) => match arg {
@@ -85,6 +86,10 @@ impl Machine {
                 OpOne::Output => {
                     let out = self.fetch(mode1);
                     (self.output_callback)(out)
+                }
+                OpOne::AdjustRelativeBase => {
+                    let adj = self.fetch(mode1);
+                    self.relative_base += adj;
                 }
             },
             Instr::TwoArg(arg, (mode1, mode2)) => {
@@ -121,31 +126,39 @@ impl Machine {
         None
     }
 
-    fn fetch(&mut self, mode: Mode) -> i32 {
+    fn fetch(&mut self, mode: Mode) -> i64 {
         let param = self.data[self.ip];
         self.ip += 1;
         match mode {
             Mode::Immediate => param,
             Mode::Position => self.data[param as usize],
+            Mode::Relative => self.data[(param + self.relative_base) as usize],
         }
     }
 
-    fn fetch_and_set(&mut self, mode: Mode, val: i32) {
-        assert_eq!(mode, Mode::Position);
+    fn fetch_and_set(&mut self, mode: Mode, val: i64) {
         let ptr = self.data[self.ip];
-        self.set(ptr as usize, val);
+        match mode {
+            Mode::Immediate => unreachable!(),
+            Mode::Position => {
+                self.set(ptr as usize, val);
+            }
+            Mode::Relative => {
+                self.set((ptr + self.relative_base) as usize, val);
+            }
+        }
         self.ip += 1;
     }
 
-    fn set(&mut self, pos: usize, val: i32) {
+    fn set(&mut self, pos: usize, val: i64) {
         self.data[pos] = val
     }
 
-    fn get(&self, posn: usize) -> i32 {
+    fn get(&self, posn: usize) -> i64 {
         self.data[posn]
     }
 
-    pub fn run(&mut self) -> i32 {
+    pub fn run(&mut self) -> i64 {
         loop {
             if let Some(v) = self.step() {
                 return v;
@@ -171,6 +184,7 @@ enum OpNone {
 enum OpOne {
     Input,
     Output,
+    AdjustRelativeBase
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -191,6 +205,7 @@ enum OpThree {
 enum Mode {
     Position,
     Immediate,
+    Relative
 }
 
 impl TryFrom<u8> for Mode {
@@ -199,12 +214,13 @@ impl TryFrom<u8> for Mode {
         match val {
             0 => Ok(Mode::Position),
             1 => Ok(Mode::Immediate),
+            2 => Ok(Mode::Relative),
             other => Err(format!("Bad mode: {}", other)),
         }
     }
 }
 
-fn parse_instr(instr: i32) -> Result<Instr, String> {
+fn parse_instr(instr: i64) -> Result<Instr, String> {
     let digits = digits(instr as u32);
     let opcode = digits[0] + digits.get(1).cloned().unwrap_or(0) * 10;
     let modes = if digits.len() > 2 { &digits[2..] } else { &[] };
@@ -217,6 +233,7 @@ fn parse_instr(instr: i32) -> Result<Instr, String> {
         6 => Instr::TwoArg(OpTwo::JumpIfFalse, Mode::two(modes)),
         7 => Instr::ThreeArg(OpThree::LessThan, Mode::three(modes)),
         8 => Instr::ThreeArg(OpThree::Equals, Mode::three(modes)),
+        9 => Instr::OneArg(OpOne::AdjustRelativeBase, Mode::one(modes)),
         99 => Instr::NoneArg({
             Mode::none(modes);
             OpNone::Exit

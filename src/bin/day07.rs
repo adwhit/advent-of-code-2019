@@ -13,7 +13,7 @@ fn main() {
     println!("{}", best);
 }
 
-fn run_chained_machines(data: &[i32], phases: (i32, i32, i32, i32, i32)) -> i32 {
+fn run_chained_machines(data: &[i64], phases: (i64, i64, i64, i64, i64)) -> i64 {
     let (tx1, rx1) = sync_channel(0);
     let (tx2, rx2) = sync_channel(0);
     let (tx3, rx3) = sync_channel(0);
@@ -42,7 +42,7 @@ fn run_chained_machines(data: &[i32], phases: (i32, i32, i32, i32, i32)) -> i32 
     }
 }
 
-fn find_best_amplitude(data: &[i32], loopback: bool) -> i32 {
+fn find_best_amplitude(data: &[i64], loopback: bool) -> i64 {
     let range = if loopback { 5..=9 } else { 0..=4 };
     range
         .permutations(5)
@@ -51,7 +51,7 @@ fn find_best_amplitude(data: &[i32], loopback: bool) -> i32 {
         .unwrap()
 }
 
-fn takes_input(inp: i32, rx: Receiver<i32>) -> impl FnMut() -> i32 {
+fn takes_input(inp: i64, rx: Receiver<i64>) -> impl FnMut() -> i64 {
     let mut has_fired = false;
     move || {
         if has_fired {
@@ -63,7 +63,7 @@ fn takes_input(inp: i32, rx: Receiver<i32>) -> impl FnMut() -> i32 {
     }
 }
 
-fn send_output(tx: SyncSender<i32>) -> impl FnMut(i32) {
+fn send_output(tx: SyncSender<i64>) -> impl FnMut(i64) {
     move |val| tx.send(val).unwrap()
 }
 
